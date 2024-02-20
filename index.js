@@ -9,9 +9,6 @@ app.use(bodyParser.urlencoded({extended: false}));
 
 app.use(cors())
 app.use(express.static('public'))
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/views/index.html')
-});
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -20,6 +17,10 @@ const userSchema = new mongoose.Schema({
   }
 })
 let user = mongoose.model('user', userSchema);
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/views/index.html')
+});
 
 app.post('/api/users', async (req, res) => {
   let userInput = req.body.username;
@@ -35,6 +36,11 @@ app.post('/api/users', async (req, res) => {
     console.log(newUser);
     res.json(newUser)
   }
+})
+
+app.get('/api/users', async (req, res) => {
+  let search = await user.find({});
+  res.send(search);
 })
 
 
