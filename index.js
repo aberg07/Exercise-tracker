@@ -10,10 +10,37 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(cors())
 app.use(express.static('public'))
 
+const exerciseSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  duration: {
+    type: Number,
+    duration: true
+  },
+  date: {
+    type: String
+  },
+  _id: {
+    type: String
+  }
+})
+let exercise = mongoose.model('exercise', exerciseSchema);
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true
+  },
+  count: {
+    type: Number
+  },
+  log: {
+    type: [exerciseSchema]
   }
 })
 let user = mongoose.model('user', userSchema);
@@ -33,14 +60,34 @@ app.post('/api/users', async (req, res) => {
   else {
     newUser = new user({username: userInput});
     await newUser.save();
-    console.log(newUser);
-    res.json(newUser)
+    res.json(newUser);
   }
 })
 
 app.get('/api/users', async (req, res) => {
   let search = await user.find({});
   res.send(search);
+})
+
+app.post('/api/users/:id/exercises', async (req, res) => {
+  let exerciseDate;
+  const search = await user.findById(req.params.id);
+  if (!search) res.json({"error": "user not found"});
+  else {
+    if (!req.body.date) exerciseDate = new Date().toDateString();
+    else exerciseDate = new Date(req.body.date).toDateString();
+    let toAdd = new exercise({
+      username: search.username,
+      description: req.body.description,
+      duration: Number(req.body.duration),
+      date: exerciseDate,
+      _id: search._id
+    })
+    await toAdd.save();
+    search.log.push(toAdd);
+    await search.save();
+    res.json(toAdd);
+  }
 })
 
 
