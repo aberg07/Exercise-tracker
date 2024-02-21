@@ -94,20 +94,28 @@ app.post('/api/users/:id/exercises', async (req, res) => {
 
 app.get('/api/users/:id/logs', async(req, res) => {
   const search = await user.findById(req.params.id);
+  //from, to, and limit are user specified queries and are optional
+  let from = new Date(req.query.from).getTime();
+  let to = new Date(req.query.to).getTime();
+  let limit = Number(req.query.limit);
+  //Making limit a negative value and using it in slice will return the last (limit) # of items
+  const filteredLog = search.log.slice(limit*-1).map((exercise) => ({
+      "description": exercise.description,
+      "duration": exercise.duration,
+      "date": exercise.date
+    })).filter((exercise) =>
+      //(from/to || true) - defaults to true if there is no "from"/"to" query
+      ((new Date(exercise.date).getTime() >= (from || true)) && (new Date(exercise.date).getTime() <= (to || true))));
   if (!search) res.json({"error": "user not found"});
   else {
     res.json({
-      "_id": search._id,
-      "username": search.username,
-      "count": search.count,
-      "log": search.log.map((exercise) => ({
-        "description": exercise.description,
-        "duration": exercise.duration,
-        "date": exercise.date
-      }))
-    });
+    "_id": search._id,
+    "username": search.username,
+    "count": filteredLog.length,
+    "log": filteredLog
+    })}
   }
-})
+)
 
 
 
