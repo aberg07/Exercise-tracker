@@ -23,12 +23,8 @@ const exerciseSchema = new mongoose.Schema({
     type: Number,
     duration: true
   },
-  date: {
-    type: String
-  },
-  _id: {
-    type: String
-  }
+  date: { type: String },
+  userId: { type: String }
 })
 let exercise = mongoose.model('exercise', exerciseSchema);
 const userSchema = new mongoose.Schema({
@@ -36,12 +32,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  count: {
-    type: Number
-  },
-  log: {
-    type: [exerciseSchema]
-  }
+  count: { type: Number },
+  log: { type: [exerciseSchema] }
 })
 let user = mongoose.model('user', userSchema);
 
@@ -60,7 +52,10 @@ app.post('/api/users', async (req, res) => {
   else {
     newUser = new user({username: userInput});
     await newUser.save();
-    res.json(newUser);
+    res.json({
+      "username": newUser.username,
+      "_id": newUser._id
+    });
   }
 })
 
@@ -81,12 +76,36 @@ app.post('/api/users/:id/exercises', async (req, res) => {
       description: req.body.description,
       duration: Number(req.body.duration),
       date: exerciseDate,
-      _id: search._id
+      userId: search._id
     })
     await toAdd.save();
     search.log.push(toAdd);
+    search.count = search.log.length;
     await search.save();
-    res.json(toAdd);
+    res.json({
+      "_id": search._id,
+      "username": search.username,
+      "date": toAdd.date,
+      "duration": toAdd.duration,
+      "description": toAdd.description
+    });
+  }
+})
+
+app.get('/api/users/:id/logs', async(req, res) => {
+  const search = await user.findById(req.params.id);
+  if (!search) res.json({"error": "user not found"});
+  else {
+    res.json({
+      "_id": search._id,
+      "username": search.username,
+      "count": search.count,
+      "log": search.log.map((exercise) => ({
+        "description": exercise.description,
+        "duration": exercise.duration,
+        "date": exercise.date
+      }))
+    });
   }
 })
 
