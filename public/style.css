@@ -57,3 +57,9 @@ code {
   background-color: #FFFEC4;
   padding: 2px;
 }
+
+#footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
