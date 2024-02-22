@@ -32,7 +32,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  count: { type: Number },
+  count: { type: Number,
+  default: 0 },
   log: { type: [exerciseSchema] }
 })
 let user = mongoose.model('user', userSchema);
@@ -67,8 +68,10 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users/:id/exercises', async (req, res) => {
   let exerciseDate;
   const search = await user.findById(req.params.id);
+  //Throw error if user is not found
   if (!search) res.json({"error": "user not found"});
   else {
+    //If a date is not specified, set to today as default
     if (!req.body.date) exerciseDate = new Date().toDateString();
     else exerciseDate = new Date(req.body.date).toDateString();
     let toAdd = new exercise({
@@ -94,28 +97,44 @@ app.post('/api/users/:id/exercises', async (req, res) => {
 
 app.get('/api/users/:id/logs', async(req, res) => {
   const search = await user.findById(req.params.id);
-  //from, to, and limit are user specified queries and are optional
-  let from = new Date(req.query.from).getTime();
-  let to = new Date(req.query.to).getTime();
-  let limit = Number(req.query.limit);
-  //Making limit a negative value and using it in slice will return the last (limit) # of items
-  const filteredLog = search.log.slice(limit*-1).map((exercise) => ({
-      "description": exercise.description,
-      "duration": exercise.duration,
-      "date": exercise.date
-    })).filter((exercise) =>
-      //(from/to || true) - defaults to true if there is no "from"/"to" query
-      ((new Date(exercise.date).getTime() >= (from || true)) && (new Date(exercise.date).getTime() <= (to || true))));
   if (!search) res.json({"error": "user not found"});
   else {
-    res.json({
-    "_id": search._id,
-    "username": search.username,
-    "count": filteredLog.length,
-    "log": filteredLog
-    })}
+    //from, to, and limit are user specified queries and are optional
+    let from = new Date(req.query.from).getTime();
+    let to = new Date(req.query.to).getTime();
+    let limit = Number(req.query.limit);
+    if (from || to) {
+      //Making limit a negative value and using it in slice will return the last (limit) # of items
+      const filteredLog = search.log.slice(limit*-1).map((exercise) => ({
+        "description": exercise.description,
+        "duration": exercise.duration,
+        "date": exercise.date
+        })).filter((exercise) =>
+        //(from/to || true) defaults to true if there is no "from"/"to" query, as one or both may be specified
+        ((new Date(exercise.date).getTime() >= (from || true)) || (new Date(exercise.date).getTime() <= (to || true))));
+        res.json({
+        "_id": search._id,
+        "username": search.username,
+        "count": filteredLog.length,
+        "log": filteredLog
+        })
+      }
+    //If neither from or to are specified, returns the whole log even if limit is undefined
+    else {
+      const filteredLog = search.log.slice(limit*-1).map((exercise) => ({
+        "description": exercise.description,
+        "duration": exercise.duration,
+        "date": exercise.date
+        }));
+      res.json({
+      "_id": search._id,
+      "username": search.username,
+      "count": filteredLog.length,
+      "log": filteredLog
+      })
+    }
   }
-)
+})
 
 
 
